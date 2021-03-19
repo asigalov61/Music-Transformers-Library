@@ -303,7 +303,7 @@ print(output_str)
 
 #@title Convert generated composition to MIDI
 S = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=TEST' + output_str, line_by_line_dataset=False, has_velocities=True, has_MIDI_channels=False, dataset_MIDI_events_time_denominator=10, char_encoding_offset=33, save_only_first_composition=True, simulate_velocity=False)
-stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG=S[0], output_file_name='/content/test')
+stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG=S[0], output_file_name='/content/Music-Sinkhorn_MIDI')
 print(stats)
 
 """# Congrats! You did it :)"""
