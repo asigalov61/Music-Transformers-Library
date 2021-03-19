@@ -330,8 +330,8 @@ encoding_has_velocities = True #@param {type:"boolean"}
 simulate_velocity = False #@param {type:"boolean"}
 char_encoding_offset = 33 #@param {type:"number"}
 
-S = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=SONG ' + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
-stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG[0], output_file_name='/content/Music-Routing-Transformer_MIDI')
+SONG = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=SONG ' + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
+stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG[0], output_file_name='/content/Music-Routing-Transformer_MIDI', output_signature='Music Routing Transformer',)
 print(stats)
 
 """# Congrats! You did it :)"""
