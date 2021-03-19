@@ -51,6 +51,17 @@ import torch.optim as optim
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 
+# constants
+
+NUM_BATCHES = int(1e5)
+BATCH_SIZE = 8
+GRADIENT_ACCUMULATE_EVERY = 4
+LEARNING_RATE = 3e-4
+VALIDATE_EVERY  = 100
+GENERATE_EVERY  = 500
+GENERATE_LENGTH = 512
+SEQ_LEN = 4096
+
 # Commented out IPython magic to ensure Python compatibility.
 #@title Download special Tegridy Piano MIDI dataset
 
@@ -72,8 +83,8 @@ from torch.utils.data import DataLoader, Dataset
 
 #@markdown 3) MIDI Channel = -1 means all MIDI channels. MIDI Channel = 16 means all channels will be processed. Otherwise, only single indicated MIDI channel will be processed.
 
-file_name_to_output_dataset_to = "/content/Music-Reformer_TXT_Dataset" #@param {type:"string"}
-desired_MIDI_channel_to_process = 0 #@param {type:"slider", min:-1, max:15, step:1}
+file_name_to_output_dataset_to = "/content/Music-Routing-Transformer_TXT_Dataset" #@param {type:"string"}
+desired_MIDI_channel_to_process = -1 #@param {type:"slider", min:-1, max:15, step:1}
 encode_velocities = True #@param {type:"boolean"}
 chordify_input_MIDIs = False #@param {type:"boolean"}
 time_denominator = 10 #@param {type:"slider", min:1, max:20, step:1}
@@ -101,7 +112,7 @@ chords_count = 0
 melody_chords = []
 melody_count = 0
 
-TXT_String = 'DATASET=Optimus-Virtuoso-Music-Dataset' + chr(10)
+TXT_String = 'DATASET=Routing-Transformer-Music-Dataset' + chr(10)
 
 TXT = ''
 melody = []
@@ -152,29 +163,19 @@ MusicDataset = [chords_list_f, melody_list_f]
 TMIDI.Tegridy_Pickle_File_Writer(MusicDataset, file_name_to_output_dataset_to)
 
 #@title Process the TXT MIDI dataset to TXT INT dataset
-full_path_to_TXT_dataset = "/content/Music-Reformer_TXT_Dataset.txt" #@param {type:"string"}
+full_path_to_TXT_dataset = "/content/Music-Routing-Transformer_TXT_Dataset.txt" #@param {type:"string"}
 with open(full_path_to_TXT_dataset, 'r') as file:
   z = file.read()
   file.close()
   Z = z.encode('utf8')
   Y = list(Z)
 
-string = '\n'.join([str(item) for item in Y])
+string = '\n'.join([str(item) for item in Y if item < 256])
 
-with open('/content/Music-Reformer_INT_Dataset.txt', 'w') as file:
+with open('/content/Music-Routing-Transformer_INT_Dataset.txt', 'w') as file:
   file.write(string)
 
-# constants
-
-NUM_BATCHES = int(1e5)
-BATCH_SIZE = 8
-GRADIENT_ACCUMULATE_EVERY = 4
-LEARNING_RATE = 3e-4
-VALIDATE_EVERY  = 100
-GENERATE_EVERY  = 500
-GENERATE_LENGTH = 512
-SEQ_LEN = 4096
-
+#@title Instantiate the model
 # helpers
 
 def cycle(loader):
@@ -204,9 +205,11 @@ model = RoutingTransformerLM(
 model = AutoregressiveWrapper(model)
 model.cuda()
 
-# prepare enwik8 data
+#@title Load INT dataset into memory and setup dataset functions
+full_path_to_TXT_dataset = "/content/Music-Routing-Transformer_TXT_Dataset.txt" #@param {type:"string"}
 
-with open('/content/Music-Reformer_INT_Dataset.txt') as file:
+
+with open('/content/Music-Routing-Transformer_INT_Dataset.txt') as file:
     X = file.read()
     Y = []
     for x in X.split('\n'):
@@ -237,6 +240,7 @@ val_loader    = cycle(DataLoader(val_dataset, batch_size = BATCH_SIZE))
 
 optim = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
+#@title Train the model
 # training
 
 for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10., desc='training'):
@@ -267,17 +271,26 @@ for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10., desc='training'):
         output_str = decode_tokens(sample)
         print(output_str)
 
+#@title Save the model
 torch.save(model.state_dict(), '/content/model.pth')
 
-#checkpoint = {'state_dict': model.state_dict(),'optimizer' :optimizer.state_dict()}
-#torch.save(checkpoint, 'Checkpoint.pth')
+checkpoint = {'state_dict': model.state_dict(),'optimizer' :optim.state_dict()}
+torch.save(checkpoint, '/content/model_sd_opt.pth')
+
+#@title Load the model
+torch.load('/content/model_sd_opt.pth')
+model.eval()
+
+#@title Generate Music
+model_temperature = 0.8 #@param {type:"slider", min:0.1, max:2, step:0.1}
+number_of_tokens_to_generate = 2056 #@param {type:"slider", min:8, max:8192, step:128}
 
 model.eval()
 inp = random.choice(val_dataset)[:-1]
 prime = decode_tokens(inp)
 print(f'%s \n\n %s', (prime, '*' * 100))
 
-sample = model.generate(inp, GENERATE_LENGTH + 3072, temperature=0.6)
+sample = model.generate(inp, number_of_tokens_to_generate, temperature=model_temperature)
 output_str = decode_tokens(sample)
 print(output_str)
 
@@ -290,3 +303,5 @@ print(output_str)
 SONG = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=TEST' + output_str, has_MIDI_channels=False, char_encoding_offset=33, simulate_velocity=False, dataset_MIDI_events_time_denominator=10, line_by_line_dataset=False, has_velocities=True)
 stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG[0], output_file_name='/content/Music-Reformer_MIDI')
 print(stats)
+
+"""# Congrats! You did it :)"""
