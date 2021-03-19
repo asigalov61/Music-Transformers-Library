@@ -73,6 +73,18 @@ from torch.utils.data import DataLoader, Dataset
 
 # %cd /content/
 
+# Commented out IPython magic to ensure Python compatibility.
+#@title Download special Synthetic Tegridy Piano MIDI dataset
+
+#@markdown Works best stand-alone/as-is for the optimal results
+# %cd /content/Dataset/
+
+!wget 'https://github.com/asigalov61/Tegridy-MIDI-Dataset/raw/master/Synthetic-Tegridy-Piano-MIDI-Dataset-CC-BY-NC-SA.zip'
+!unzip '/content/Dataset/Synthetic-Tegridy-Piano-MIDI-Dataset-CC-BY-NC-SA.zip'
+!rm '/content/Dataset/Synthetic-Tegridy-Piano-MIDI-Dataset-CC-BY-NC-SA.zip'
+
+# %cd /content/
+
 #@title Process MIDIs to special MIDI dataset with Tegridy MIDI Processor
 #@markdown NOTES:
 
@@ -307,7 +319,7 @@ torch.save(model.state_dict(), '/content/model.pth')
 checkpoint = {'state_dict': model.state_dict(),'optimizer' :optim.state_dict()}
 torch.save(checkpoint, '/content/model_sd_opt.pth')
 
-#@title Load a model
+#@title Load/Reload the model
 model = torch.load('/content/model.pth')
 model.eval()
 
@@ -331,8 +343,8 @@ encoding_has_velocities = True #@param {type:"boolean"}
 simulate_velocity = False #@param {type:"boolean"}
 char_encoding_offset = 33 #@param {type:"number"}
 
-S = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=SONG ' + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
-stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG=S[0], output_file_name='/content/Music-XTransformer_MIDI')
+SONG = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=SONG ' + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
+stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG[0], output_file_name='/content/Music-XTransformer_MIDI', output_signature='Music XTransformer')
 print(stats)
 
 """# Congrats! You did it :)"""
