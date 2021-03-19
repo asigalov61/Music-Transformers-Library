@@ -283,7 +283,7 @@ torch.load('/content/model_sd_opt.pth')
 model.eval()
 
 #@title Generate Music
-model_temperature = 0.8 #@param {type:"slider", min:0.1, max:2, step:0.1}
+model_temperature = 0.6 #@param {type:"slider", min:0.1, max:2, step:0.1}
 number_of_tokens_to_generate = 2056 #@param {type:"slider", min:8, max:8192, step:128}
 
 model.eval()
@@ -302,7 +302,7 @@ print(output_str)
 
 #TXT = TMIDI.Tegridy_INT_String_to_TXT_Converter(input, line_by_line_input=False)
 SONG = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=TEST' + output_str, has_MIDI_channels=False, char_encoding_offset=33, simulate_velocity=False, dataset_MIDI_events_time_denominator=10, line_by_line_dataset=False, has_velocities=True)
-stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG[0], output_file_name='/content/Music-Reformer_MIDI')
+stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG[0], output_file_name='/content/Music-Routing-Transformer_MIDI')
 print(stats)
 
 """# Congrats! You did it :)"""
