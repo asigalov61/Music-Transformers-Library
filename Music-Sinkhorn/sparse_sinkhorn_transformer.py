@@ -56,9 +56,9 @@ from torch.utils.data import DataLoader, Dataset
 # constants
 
 NUM_BATCHES = int(1e5)
-BATCH_SIZE = 8
-GRADIENT_ACCUMULATE_EVERY = 4
-LEARNING_RATE = 3e-4
+BATCH_SIZE = 24
+GRADIENT_ACCUMULATE_EVERY = 2
+LEARNING_RATE = 6e-4
 VALIDATE_EVERY  = 100
 GENERATE_EVERY  = 500
 GENERATE_LENGTH = 1024
@@ -178,39 +178,16 @@ string = '\n'.join([str(item) for item in Y if item < 256])
 with open('/content/Music-Sinkhorn_INT_Dataset.txt', 'w') as file:
   file.write(string)
 
-#@title Load INT dataset into memory and setup dataset functions
-full_path_to_TXT_dataset = "/content/Music-Sinkhorn_TXT_Dataset.txt" #@param {type:"string"}
+#@title Load INT dataset into memory and setup the dataset
+full_path_to_INT_dataset = "/content/Music-Sinkhorn_INT_Dataset.txt" #@param {type:"string"}
 
-with open(full_path_to_TXT_dataset) as file:
+with open(full_path_to_INT_dataset) as file:
     X = file.read()
     Y = []
     for x in X.split('\n'):
       Y.append(int(x))
 trX, vaX = np.split(Y, [int(1000000)])
 data_train, data_val = torch.from_numpy(trX), torch.from_numpy(vaX)
-
-class TextSamplerDataset(Dataset):
-    def __init__(self, data, seq_len):
-        super().__init__()
-        self.data = data
-        self.seq_len = seq_len
-
-    def __getitem__(self, index):
-        rand_start = torch.randint(0, self.data.size(0) - self.seq_len - 1, (1,))
-        full_seq = self.data[rand_start: rand_start + self.seq_len + 1].long()
-        return full_seq.cuda()
-
-    def __len__(self):
-        return self.data.size(0) // self.seq_len
-
-train_dataset = TextSamplerDataset(data_train, SEQ_LEN)
-val_dataset   = TextSamplerDataset(data_val, SEQ_LEN)
-train_loader  = cycle(DataLoader(train_dataset, batch_size = BATCH_SIZE))
-val_loader    = cycle(DataLoader(val_dataset, batch_size = BATCH_SIZE))
-
-# optimizer
-
-optim = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 #@title Instantiate Model
 # helpers
@@ -245,6 +222,30 @@ model = SinkhornTransformerLM(
 
 model = AutoregressiveWrapper(model)
 model.cuda()
+
+
+class TextSamplerDataset(Dataset):
+    def __init__(self, data, seq_len):
+        super().__init__()
+        self.data = data
+        self.seq_len = seq_len
+
+    def __getitem__(self, index):
+        rand_start = torch.randint(0, self.data.size(0) - self.seq_len - 1, (1,))
+        full_seq = self.data[rand_start: rand_start + self.seq_len + 1].long()
+        return full_seq.cuda()
+
+    def __len__(self):
+        return self.data.size(0) // self.seq_len
+
+train_dataset = TextSamplerDataset(data_train, SEQ_LEN)
+val_dataset   = TextSamplerDataset(data_val, SEQ_LEN)
+train_loader  = cycle(DataLoader(train_dataset, batch_size = BATCH_SIZE))
+val_loader    = cycle(DataLoader(val_dataset, batch_size = BATCH_SIZE))
+
+# optimizer
+
+optim = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 #@title Train the Model
 # training
