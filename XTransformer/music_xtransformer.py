@@ -23,6 +23,10 @@ This is a work in progress so please check back for updates.
 Project Los Angeles
 
 Tegridy Code 2021
+
+***
+
+# Setup the environment
 """
 
 #@title Install dependencies
@@ -30,9 +34,16 @@ Tegridy Code 2021
 !pip install x-transformers
 !pip install numpy
 
-#@title Import modules
-import numpy as np
+#@title Import all needed modules
+
+print('Loading needed modules. Please wait...')
 import os
+
+if not os.path.exists('/content/Dataset'):
+    os.makedirs('/content/Dataset')
+
+import numpy as np
+
 os.chdir('/content/tegridy-tools/tegridy-tools')
 import TMIDI
 os.chdir('/content/')
@@ -47,6 +58,148 @@ import torch
 import torch.optim as optim
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
+
+"""# Prep the MIDIs and TXT/INT datasets"""
+
+# Commented out IPython magic to ensure Python compatibility.
+#@title Download special Tegridy Piano MIDI dataset
+
+#@markdown Works best stand-alone/as-is for the optimal results
+# %cd /content/Dataset/
+
+!wget 'https://github.com/asigalov61/Tegridy-MIDI-Dataset/raw/master/Tegridy-Piano-CC-BY-NC-SA.zip'
+!unzip -j '/content/Dataset/Tegridy-Piano-CC-BY-NC-SA.zip'
+!rm '/content/Dataset/Tegridy-Piano-CC-BY-NC-SA.zip'
+
+# %cd /content/
+
+#@title Process MIDIs to special MIDI dataset with Tegridy MIDI Processor
+#@markdown NOTES:
+
+#@markdown 1) Dataset MIDI file names are used as song names. Feel free to change it to anything you like.
+
+#@markdown 2) Best results are achieved with the single-track, single-channel, single-instrument MIDI 0 files with plain English names (avoid special or sys/foreign chars)
+
+#@markdown 3) MIDI Channel = -1 means all MIDI channels except drums. MIDI Channel = 16 means all channels will be processed. Otherwise, only single indicated MIDI channel will be processed.
+
+file_name_to_output_dataset_to = "/content/Music-XTransformer_TXT_Dataset" #@param {type:"string"}
+desired_MIDI_channel_to_process = 16 #@param {type:"slider", min:-1, max:16, step:1}
+encode_velocities = True #@param {type:"boolean"}
+encode_MIDI_channels = False #@param {type:"boolean"}
+add_transposed_dataset_by_this_many_pitches = 0 #@param {type:"slider", min:-12, max:12, step:1}
+chordify_input_MIDIs = False #@param {type:"boolean"}
+time_denominator = 10 #@param {type:"slider", min:1, max:20, step:1}
+chars_encoding_offset = 33 #@param {type:"number"}
+
+
+print('Starting up...')
+###########
+
+average_note_pitch = 0
+min_note = 127
+max_note = 0
+
+files_count = 0
+
+ev = 0
+
+chords_list_f = []
+melody_list_f = []
+
+chords_list = []
+chords_count = 0
+
+melody_chords = []
+melody_count = 0
+
+TXT_String = 'DATASET=Music-XTransformer-Dataset' + chr(10)
+
+TXT = ''
+melody = []
+chords = []
+
+###########
+
+print('Loading MIDI files...')
+print('This may take a while on a large dataset in particular.')
+
+dataset_addr = "/content/Dataset/"
+os.chdir(dataset_addr)
+filez = os.listdir(dataset_addr)
+
+print('Processing MIDI files. Please wait...')
+for f in tqdm.auto.tqdm(filez):
+  try:
+    fn = os.path.basename(f)
+    fn1 = fn.split('.')[0]
+    #notes = song_notes_list[song_notes_list.index(fn1)+1]
+
+
+    files_count += 1
+    TXT, melody, chords = TMIDI.Optimus_MIDI_TXT_Processor(f, chordify_TXT=chordify_input_MIDIs, output_MIDI_channels=encode_MIDI_channels, char_offset=chars_encoding_offset, dataset_MIDI_events_time_denominator=time_denominator, output_velocity=encode_velocities, MIDI_channel=desired_MIDI_channel_to_process, MIDI_patch=range(0, 127))
+    TXT_String += TXT
+    melody_list_f += melody
+    chords_list_f += chords
+
+    if add_transposed_dataset_by_this_many_pitches != 0:
+
+      TXT, melody, chords = TMIDI.Optimus_MIDI_TXT_Processor(f, chordify_TXT=chordify_input_MIDIs, output_MIDI_channels=encode_MIDI_channels, char_offset=chars_encoding_offset, dataset_MIDI_events_time_denominator=time_denominator, output_velocity=encode_velocities, MIDI_channel=desired_MIDI_channel_to_process, transpose_by=add_transposed_dataset_by_this_many_pitches, MIDI_patch=range(0, 127))
+      TXT_String += TXT
+      melody_list_f += melody
+      chords_list_f += chords   
+    #TXT_String += 'INTRO=' + notes + '\n'
+    
+  
+  except:
+    print('Bad MIDI:', f)
+    continue
+
+print('Task complete :)')
+print('==================================================')
+print('Number of processed dataset MIDI files:', files_count)
+print('Number of MIDI chords recorded:', len(chords_list_f))
+print('First chord event:', chords_list_f[0], 'Last chord event:', chords_list_f[-1]) 
+print('Number of recorded melody events:', len(melody_list_f))
+print('First melody event:', melody_list_f[0], 'Last Melody event:', melody_list_f[-1])
+print('Total number of MIDI events recorded:', len(chords_list_f) + len(melody_list_f))
+
+# Writing dataset to TXT file
+with open(file_name_to_output_dataset_to + '.txt', 'wb') as f:
+  f.write(TXT_String.encode('utf-8', 'replace'))
+  f.close
+
+# Dataset
+MusicDataset = [chords_list_f, melody_list_f]
+
+# Writing dataset to pickle file
+TMIDI.Tegridy_Pickle_File_Writer(MusicDataset, file_name_to_output_dataset_to)
+
+#@title Process the TXT MIDI dataset to TXT INT dataset
+full_path_to_TXT_dataset = "/content/Music-XTransformer_TXT_Dataset.txt" #@param {type:"string"}
+
+with open(full_path_to_TXT_dataset, 'r') as file:
+  z = file.read()
+  file.close()
+  Z = z.encode('utf8')
+  Y = list(Z)
+
+string = '\n'.join([str(item) for item in Y if item < 256])
+
+with open('/content/Music-XTransformer_INT_Dataset.txt', 'w') as file:
+  file.write(string)
+
+#@title Load INT dataset into memory and setup the dataset
+full_path_to_INT_dataset = "/content/Music-XTransformer_INT_Dataset.txt" #@param {type:"string"}
+
+with open(full_path_to_INT_dataset) as file:
+    X = file.read()
+    Y = []
+    for x in X.split('\n'):
+      Y.append(int(x))
+trX, vaX = np.split(Y, [int(1000000)])
+data_train, data_val = torch.from_numpy(trX), torch.from_numpy(vaX)
+
+"""# Setup and Train"""
 
 #@title Setup and intialize the model
 # constants
@@ -84,17 +237,7 @@ model = TransformerWrapper(
 model = AutoregressiveWrapper(model)
 model.cuda()
 
-# prepare enwik8 data
-
-with open('/content/Optimus-VIRTUOSO-Music-Dataset.txt', 'r') as file:
-  z = file.read()
-Z = z.encode('utf8')
-Y = list(Z)
-
-
-
-trX, vaX = np.split(Y, [int(1000000)])
-data_train, data_val = torch.from_numpy(trX), torch.from_numpy(vaX)
+'''========================================='''
 
 class TextSamplerDataset(Dataset):
     def __init__(self, data, seq_len):
@@ -150,6 +293,8 @@ for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10., desc='training'):
         output_str = decode_tokens(sample)
         print(output_str)
 
+"""# Save and Load/Reload the model"""
+
 #@title Save the model
 torch.save(model, '/content/model.pth')
 torch.save(model.state_dict, '/content/model_sd.pth')
@@ -157,6 +302,8 @@ torch.save(model.state_dict, '/content/model_sd.pth')
 #@title Load a model
 model = torch.load('/content/model.pth')
 model.eval()
+
+"""# Generate"""
 
 #@title Generate from the model
 
@@ -168,6 +315,9 @@ sample = model.generate(inp[:16], GENERATE_LENGTH, temperature=0.8) #GENERATE_LE
 output_str = decode_tokens(sample)
 print(output_str)
 
+#@title Convert generated output to MIDI
 S = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=TEST' + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=True, dataset_MIDI_events_time_denominator=10, char_encoding_offset=33, simulate_velocity=False)
-stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG=S[0], output_file_name='/content/test')
+stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG=S[0], output_file_name='/content/Music-XTransformer_MIDI')
 print(stats)
+
+"""# Congrats! You did it :)"""
