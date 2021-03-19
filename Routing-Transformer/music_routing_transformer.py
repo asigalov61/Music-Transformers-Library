@@ -23,6 +23,8 @@ Project Los Angeles
 Tegridy Code 2021
 
 ***
+
+# Setup Environment
 """
 
 #@title Install dependencies
@@ -62,6 +64,8 @@ GENERATE_EVERY  = 500
 GENERATE_LENGTH = 512
 SEQ_LEN = 4096
 
+"""# Prep MIDIs and TXT/INT datasets"""
+
 # Commented out IPython magic to ensure Python compatibility.
 #@title Download special Tegridy Piano MIDI dataset
 
@@ -81,18 +85,19 @@ SEQ_LEN = 4096
 
 #@markdown 2) Best results are achieved with the single-track, single-channel, single-instrument MIDI 0 files with plain English names (avoid special or sys/foreign chars)
 
-#@markdown 3) MIDI Channel = -1 means all MIDI channels. MIDI Channel = 16 means all channels will be processed. Otherwise, only single indicated MIDI channel will be processed.
+#@markdown 3) MIDI Channel = -1 means all MIDI channels except drums. MIDI Channel = 16 means all channels will be processed. Otherwise, only single indicated MIDI channel will be processed.
 
 file_name_to_output_dataset_to = "/content/Music-Routing-Transformer_TXT_Dataset" #@param {type:"string"}
-desired_MIDI_channel_to_process = -1 #@param {type:"slider", min:-1, max:15, step:1}
+desired_MIDI_channel_to_process = 16 #@param {type:"slider", min:-1, max:16, step:1}
 encode_velocities = True #@param {type:"boolean"}
+encode_MIDI_channels = False #@param {type:"boolean"}
+add_transposed_dataset_by_this_many_pitches = 0 #@param {type:"slider", min:-12, max:12, step:1}
 chordify_input_MIDIs = False #@param {type:"boolean"}
 time_denominator = 10 #@param {type:"slider", min:1, max:20, step:1}
 chars_encoding_offset = 33 #@param {type:"number"}
 
-print('TMIDI Processor')
-print('Starting up...')
 
+print('Starting up...')
 ###########
 
 average_note_pitch = 0
@@ -112,7 +117,7 @@ chords_count = 0
 melody_chords = []
 melody_count = 0
 
-TXT_String = 'DATASET=Routing-Transformer-Music-Dataset' + chr(10)
+TXT_String = 'DATASET=Music-XTransformer-Dataset' + chr(10)
 
 TXT = ''
 melody = []
@@ -130,12 +135,24 @@ filez = os.listdir(dataset_addr)
 print('Processing MIDI files. Please wait...')
 for f in tqdm.auto.tqdm(filez):
   try:
+    fn = os.path.basename(f)
+    fn1 = fn.split('.')[0]
+    #notes = song_notes_list[song_notes_list.index(fn1)+1]
+
 
     files_count += 1
-    TXT, melody, chords = TMIDI.Optimus_MIDI_TXT_Processor(f, chordify_TXT=chordify_input_MIDIs, output_MIDI_channels=False, char_offset=chars_encoding_offset, dataset_MIDI_events_time_denominator=time_denominator, output_velocity=encode_velocities, MIDI_patch=range(0,127))
+    TXT, melody, chords = TMIDI.Optimus_MIDI_TXT_Processor(f, chordify_TXT=chordify_input_MIDIs, output_MIDI_channels=encode_MIDI_channels, char_offset=chars_encoding_offset, dataset_MIDI_events_time_denominator=time_denominator, output_velocity=encode_velocities, MIDI_channel=desired_MIDI_channel_to_process, MIDI_patch=range(0, 127))
+    TXT_String += TXT
     melody_list_f += melody
     chords_list_f += chords
-    TXT_String += TXT
+
+    if add_transposed_dataset_by_this_many_pitches != 0:
+
+      TXT, melody, chords = TMIDI.Optimus_MIDI_TXT_Processor(f, chordify_TXT=chordify_input_MIDIs, output_MIDI_channels=encode_MIDI_channels, char_offset=chars_encoding_offset, dataset_MIDI_events_time_denominator=time_denominator, output_velocity=encode_velocities, MIDI_channel=desired_MIDI_channel_to_process, transpose_by=add_transposed_dataset_by_this_many_pitches, MIDI_patch=range(0, 127))
+      TXT_String += TXT
+      melody_list_f += melody
+      chords_list_f += chords   
+    #TXT_String += 'INTRO=' + notes + '\n'
     
   
   except:
@@ -164,28 +181,36 @@ TMIDI.Tegridy_Pickle_File_Writer(MusicDataset, file_name_to_output_dataset_to)
 
 #@title Process the TXT MIDI dataset to TXT INT dataset
 full_path_to_TXT_dataset = "/content/Music-Routing-Transformer_TXT_Dataset.txt" #@param {type:"string"}
-with open(full_path_to_TXT_dataset, 'r') as file:
+
+print('Processing...')
+with open(full_path_to_TXT_dataset) as file:
   z = file.read()
   file.close()
-  Z = z.encode('utf8')
-  Y = list(Z)
+  Y = list(z)
 
-string = '\n'.join([str(item) for item in Y if item < 256])
+string = '\n'.join([str(ord(item)) for item in Y if ord(item) < 256])
 
 with open('/content/Music-Routing-Transformer_INT_Dataset.txt', 'w') as file:
   file.write(string)
+  
+print('Done!')
 
 #@title Load INT dataset into memory and setup dataset
 full_path_to_INT_dataset = "/content/Music-Routing-Transformer_INT_Dataset.txt" #@param {type:"string"}
+dataset_split_ratio = 0.9 #@param {type:"slider", min:0.1, max:0.9, step:0.1}
 
-
+print('Processing...')
 with open(full_path_to_INT_dataset) as file:
     X = file.read()
-    Y = []
+    H = []
     for x in X.split('\n'):
-      Y.append(int(x))
-    trX, vaX = np.split(Y, [int(1000000)])
-    data_train, data_val = torch.from_numpy(trX), torch.from_numpy(vaX)
+      H.append(int(x))
+      
+trX, vaX = np.split(H, [int(len(H) * dataset_split_ratio)])
+data_train, data_val = torch.from_numpy(trX), torch.from_numpy(vaX)
+print('Done!')
+
+"""# Prep and train the model"""
 
 #@title Instantiate the model
 # helpers
@@ -272,6 +297,8 @@ for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10., desc='training'):
         output_str = decode_tokens(sample)
         print(output_str)
 
+"""# Save and Load/Reload the model"""
+
 #@title Save the model
 torch.save(model.state_dict(), '/content/model.pth')
 
@@ -282,9 +309,11 @@ torch.save(checkpoint, '/content/model_sd_opt.pth')
 torch.load('/content/model_sd_opt.pth')
 model.eval()
 
+"""# Generate from the model"""
+
 #@title Generate Music
-model_temperature = 0.6 #@param {type:"slider", min:0.1, max:2, step:0.1}
-number_of_tokens_to_generate = 2056 #@param {type:"slider", min:8, max:8192, step:128}
+model_temperature = 0.8 #@param {type:"slider", min:0.1, max:2, step:0.1}
+number_of_tokens_to_generate = 2056 #@param {type:"slider", min:8, max:4096, step:128}
 
 model.eval()
 inp = random.choice(val_dataset)[:-1]
@@ -295,13 +324,13 @@ sample = model.generate(inp, number_of_tokens_to_generate, temperature=model_tem
 output_str = decode_tokens(sample)
 print(output_str)
 
-#@title Convert generated output to MIDI.
-# Run the cells below to convert generated output to MIDI.
-# If you getting errors/halts, regenerate the output again.
-# Model must be sufficiently trained. Rec. 0.90+ accuracy for the output to make sense and pass error control.
+#@title Convert generated output to MIDI
+time_denominator = 10 #@param {type:"slider", min:1, max:20, step:1}
+encoding_has_velocities = True #@param {type:"boolean"}
+simulate_velocity = False #@param {type:"boolean"}
+char_encoding_offset = 33 #@param {type:"number"}
 
-#TXT = TMIDI.Tegridy_INT_String_to_TXT_Converter(input, line_by_line_input=False)
-SONG = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=TEST' + output_str, has_MIDI_channels=False, char_encoding_offset=33, simulate_velocity=False, dataset_MIDI_events_time_denominator=10, line_by_line_dataset=False, has_velocities=True)
+S = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=TEST ' + prime, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
 stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG[0], output_file_name='/content/Music-Routing-Transformer_MIDI')
 print(stats)
 
