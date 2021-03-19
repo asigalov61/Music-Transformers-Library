@@ -175,6 +175,18 @@ string = '\n'.join([str(item) for item in Y if item < 256])
 with open('/content/Music-Routing-Transformer_INT_Dataset.txt', 'w') as file:
   file.write(string)
 
+#@title Load INT dataset into memory and setup dataset
+full_path_to_INT_dataset = "/content/Music-Routing-Transformer_INT_Dataset.txt" #@param {type:"string"}
+
+
+with open(full_path_to_INT_dataset) as file:
+    X = file.read()
+    Y = []
+    for x in X.split('\n'):
+      Y.append(int(x))
+    trX, vaX = np.split(Y, [int(1000000)])
+    data_train, data_val = torch.from_numpy(trX), torch.from_numpy(vaX)
+
 #@title Instantiate the model
 # helpers
 
@@ -205,17 +217,6 @@ model = RoutingTransformerLM(
 model = AutoregressiveWrapper(model)
 model.cuda()
 
-#@title Load INT dataset into memory and setup dataset functions
-full_path_to_TXT_dataset = "/content/Music-Routing-Transformer_TXT_Dataset.txt" #@param {type:"string"}
-
-
-with open('/content/Music-Routing-Transformer_INT_Dataset.txt') as file:
-    X = file.read()
-    Y = []
-    for x in X.split('\n'):
-      Y.append(int(x))
-    trX, vaX = np.split(Y, [int(1000000)])
-    data_train, data_val = torch.from_numpy(trX), torch.from_numpy(vaX)
 
 class TextSamplerDataset(Dataset):
     def __init__(self, data, seq_len):
