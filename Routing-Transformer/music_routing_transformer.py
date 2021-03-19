@@ -117,7 +117,7 @@ chords_count = 0
 melody_chords = []
 melody_count = 0
 
-TXT_String = 'DATASET=Music-XTransformer-Dataset' + chr(10)
+TXT_String = 'DATASET=Music-Routing-Transformer-Dataset' + chr(10)
 
 TXT = ''
 melody = []
@@ -300,13 +300,13 @@ for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10., desc='training'):
 """# Save and Load/Reload the model"""
 
 #@title Save the model
-torch.save(model.state_dict(), '/content/model.pth')
+torch.save(model.state_dict(), '/content/Music-Routing-Transformer-Model.pth')
 
 checkpoint = {'state_dict': model.state_dict(),'optimizer' :optim.state_dict()}
-torch.save(checkpoint, '/content/model_sd_opt.pth')
+torch.save(checkpoint, '/content/Music-Routing-Transformer-Model_sd_opt.pth')
 
 #@title Load the model
-torch.load('/content/model_sd_opt.pth')
+torch.load('/content/Music-Routing-Transformer-Model_sd_opt.pth')
 model.eval()
 
 """# Generate from the model"""
