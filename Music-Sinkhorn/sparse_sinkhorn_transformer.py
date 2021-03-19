@@ -58,7 +58,7 @@ from torch.utils.data import DataLoader, Dataset
 # constants
 
 NUM_BATCHES = int(1e5)
-BATCH_SIZE = 24
+BATCH_SIZE = 28
 GRADIENT_ACCUMULATE_EVERY = 2
 LEARNING_RATE = 6e-4
 VALIDATE_EVERY  = 100
@@ -306,13 +306,13 @@ for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10., desc='training'):
 """# Save and Load/Reload the model"""
 
 #@title Save the model
-torch.save(model.state_dict(), '/content/model.pth')
+torch.save(model.state_dict(), '/content/Music-Sinkhorn-Model.pth')
 
 checkpoint = {'state_dict': model.state_dict(),'optimizer' :optim.state_dict()}
-torch.save(checkpoint, '/content/model_sd_opt.pth')
+torch.save(checkpoint, '/content/Music-Sinkhorn-Model_sd_opt.pth')
 
 #@title Load/Reload the model
-torch.load('/content/model_sd_opt.pth')
+torch.load('/content/Music-Sinkhorn-Model_sd_opt.pth')
 model.eval()
 
 """# Generate from the model"""
@@ -326,7 +326,7 @@ inp = random.choice(val_dataset)[:-1]
 prime = decode_tokens(inp)
 print(f'%s \n\n %s', (prime, '*' * 100))
 
-sample = model.generate(inp[:16], number_of_tokens_to_generate, temperature=model_temperature)
+sample = model.generate(inp, number_of_tokens_to_generate, temperature=model_temperature)
 output_str = decode_tokens(sample)
 print(output_str)
 
