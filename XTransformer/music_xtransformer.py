@@ -314,13 +314,13 @@ for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10., desc='training'):
 """# Save and Load/Reload the model"""
 
 #@title Save the model
-torch.save(model.state_dict(), '/content/model.pth')
+torch.save(model.state_dict(), '/content/Music-XTransformer-Model.pth')
 
 checkpoint = {'state_dict': model.state_dict(),'optimizer' :optim.state_dict()}
-torch.save(checkpoint, '/content/model_sd_opt.pth')
+torch.save(checkpoint, '/content/Music-XTransformer-Model_sd_opt.pth')
 
 #@title Load/Reload the model
-model = torch.load('/content/model.pth')
+model = torch.load('/content/Music-XTransformer-Model.pth')
 model.eval()
 
 """# Generate from the model"""
