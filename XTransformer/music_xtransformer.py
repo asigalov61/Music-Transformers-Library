@@ -314,14 +314,14 @@ model.eval()
 """# Generate from the model"""
 
 #@title Generate Music
-number_of_tokens_to_generate = 2056 #@param {type:"slider", min:8, max:4096, step:128}
+number_of_tokens_to_generate = 3976 #@param {type:"slider", min:8, max:4096, step:128}
 model_temperature = 0.8 #@param {type:"slider", min:0.1, max:2, step:0.1}
 
 inp = random.choice(val_dataset)[:-1]
 prime = decode_tokens(inp)
 print(f'%s \n\n %s', (prime, '*' * 100))
-
-sample = model.generate(inp[:16], number_of_tokens_to_generate, temperature=model_temperature) #GENERATE_LENGTH)
+ 
+sample = model.generate(start_tokens=inp[:16], seq_len=number_of_tokens_to_generate, temperature=model_temperature) #GENERATE_LENGTH)
 output_str = decode_tokens(sample)
 print(output_str)
 
@@ -331,7 +331,7 @@ encoding_has_velocities = True #@param {type:"boolean"}
 simulate_velocity = False #@param {type:"boolean"}
 char_encoding_offset = 33 #@param {type:"number"}
 
-S = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=TEST ' + prime, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
+S = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=TEST ' + prime + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
 stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG=S[0], output_file_name='/content/Music-XTransformer_MIDI')
 print(stats)
 
