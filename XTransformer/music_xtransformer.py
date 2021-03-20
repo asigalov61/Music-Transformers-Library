@@ -10,7 +10,7 @@ Original file is located at
 
 ***
 
-Credit for the PyTorch Reformer implementation goes out to @lucidrains of GitHub: 
+Credit for the PyTorch XTransformer implementation goes out to @lucidrains of GitHub: 
 
 https://github.com/lucidrains/x-transformers
 
@@ -327,7 +327,7 @@ model.eval()
 
 #@title Generate Music
 number_of_tokens_to_generate = 3976 #@param {type:"slider", min:8, max:4096, step:128}
-model_temperature = 0.8 #@param {type:"slider", min:0.1, max:2, step:0.1}
+model_temperature = 1 #@param {type:"slider", min:0.1, max:2, step:0.1}
 
 inp = random.choice(val_dataset)[:-1]
 prime = decode_tokens(inp)
@@ -342,8 +342,14 @@ time_denominator = 10 #@param {type:"slider", min:1, max:20, step:1}
 encoding_has_velocities = True #@param {type:"boolean"}
 simulate_velocity = False #@param {type:"boolean"}
 char_encoding_offset = 33 #@param {type:"number"}
+include_primer_in_output = True #@param {type:"boolean"}
+save_only_first_composition = True #@param {type:"boolean"}
 
-SONG = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=SONG ' + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
+if include_primer_in_output:
+  SONG = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=SONG\n' + prime + '\n' + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity)
+else:
+  SONG = TMIDI.Tegridy_Optimus_TXT_to_Notes_Converter('SONG=SONG\n' + output_str, line_by_line_dataset = False, has_MIDI_channels=False, has_velocities=encoding_has_velocities, dataset_MIDI_events_time_denominator=time_denominator, char_encoding_offset=char_encoding_offset, simulate_velocity=simulate_velocity, save_only_first_composition=save_only_first_composition)
+
 stats = TMIDI.Tegridy_SONG_to_MIDI_Converter(SONG[0], output_file_name='/content/Music-XTransformer_MIDI', output_signature='Music XTransformer')
 print(stats)
 
